@@ -1,0 +1,259 @@
+import pyodbc
+from datetime import datetime
+
+class MedicalAppointmentSystem:
+    def __init__(self, server, database):
+        self.server = server
+        self.database = database
+        self.connection = None
+
+    def connect(self):
+        try:
+            self.connection = pyodbc.connect(f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.server};DATABASE={self.database};Trusted_Connection=yes;')
+            print('Connected to Database.')
+        except pyodbc.Error as e:
+            print(f"Error connecting to database: {e}")
+
+    def disconnect(self):
+        if self.connection:
+            self.connection.close()
+            print('Disconnected from Database.')
+        else:
+            print('No active connection to disconnect.')
+
+    def add_patient(self, name, surname, age, gender, problem):
+        if self.connection is None:
+            print("No database connection. Please connect to the database first.")
+            return
+        
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("INSERT INTO Patients (Patient_Name, Patient_Surname, Patient_Age, Patient_Gender, Patient_Problem) VALUES (?, ?, ?, ?, ?)",
+                           (name, surname, age, gender, problem))
+            self.connection.commit()
+            cursor.close()
+            print("Patient added successfully.")
+        except pyodbc.Error as e:
+            print(f"Error adding patient: {e}")
+
+    def add_doctor(self, name, surname, work):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("INSERT INTO Doctors (Doctor_Name, Doctor_Surname, Doctor_work) VALUES (?, ?, ?)",
+                           (name, surname, work))
+            self.connection.commit()
+            cursor.close()
+            print("Doctor added successfully.")
+        except pyodbc.Error as e:
+            print(f"Error adding doctor: {e}")
+
+    def update_patient_problem(self, patient_id, new_problem):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("UPDATE Patients SET Patient_Problem = ? WHERE PatientID = ?",
+                           (new_problem, patient_id))
+            self.connection.commit()
+            cursor.close()
+            print("Patient problem updated successfully.")
+        except pyodbc.Error as e:
+            print(f"Error updating patient problem: {e}")
+
+    
+    def delete_doctor(self, doctor_id):
+        try:
+            cursor = self.connection.cursor()
+
+            # Check if the doctor has associated appointments
+            cursor.execute("SELECT COUNT(*) FROM Appointment WHERE DoctorID = ?", (doctor_id,))
+            appointment_count = cursor.fetchone()[0]
+
+            if appointment_count > 0:
+                print(f"Error: Doctor has {appointment_count} associated appointments. Please delete appointments first.")
+            else:
+                cursor.execute("DELETE FROM Doctors WHERE DoctorID = ?", (doctor_id,))
+                self.connection.commit()
+                print("Doctor deleted successfully.")
+
+            cursor.close()
+        except pyodbc.Error as e:
+            print(f"Error deleting doctor: {e}")
+    
+    def delete_appointment(self, appointment_id):
+        try:
+            cursor = self.connection.cursor()
+
+            # Delete the appointment based on the appointment ID
+            cursor.execute("DELETE FROM Appointment WHERE AppointmentID = ?", (appointment_id,))
+            self.connection.commit()
+            print("Appointment deleted successfully.")
+
+            cursor.close()
+        except pyodbc.Error as e:
+            print(f"Error deleting appointment: {e}")
+
+
+    def add_appointment(self, patient_id, doctor_id, appointment_date, appointment_time):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("INSERT INTO Appointment (PatientID, DoctorID, AppointmentDate, AppointmentTime) VALUES (?, ?, ?, ?)",
+                           (patient_id, doctor_id, appointment_date, appointment_time))
+            self.connection.commit()
+            cursor.close()
+            print("Appointment added successfully.")
+        except pyodbc.Error as e:
+            print(f"Error adding appointment: {e}")
+
+    def manual_add_patient(self):
+        name = input("Enter patient's name: ")
+        surname = input("Enter patient's surname: ")
+        age = int(input("Enter patient's age: "))
+        gender = input("Enter patient's gender: ")
+        problem = input("Enter patient's problem: ")
+        self.add_patient(name, surname, age, gender, problem)
+
+    def manual_add_doctor(self):
+        name = input("Enter doctor's name: ")
+        surname = input("Enter doctor's surname: ")
+        work = input("Enter doctor's work/hospital: ")
+        self.add_doctor(name, surname, work)
+
+    def manual_update_patient_problem(self):
+        patient_id = int(input("Enter patient ID to update problem: "))
+        new_problem = input("Enter new problem description: ")
+        self.update_patient_problem(patient_id, new_problem)
+
+    def manual_delete_doctor(self):
+        doctor_id = int(input("Enter doctor ID to delete: "))
+        self.delete_doctor(doctor_id)
+
+    def manual_delete_appointment(self):
+        appointment_id = int(input("Enter Appointment ID to delete: "))
+        self.delete_appointment(appointment_id)
+
+    def manual_add_appointment(self):
+        try:
+            patient_id = int(input("Enter Patient ID for the appointment: "))
+            doctor_id = int(input("Enter Doctor ID for the appointment: "))
+            appointment_date = input("Enter Appointment Date (YYYY-MM-DD): ")
+            appointment_time = input("Enter Appointment Time (HH:MM:SS): ")
+
+            # Convert date and time strings to datetime objects
+            appointment_date = datetime.strptime(appointment_date, "%Y-%m-%d").date()
+            appointment_time = datetime.strptime(appointment_time, "%H:%M:%S").time()
+
+            # Add the appointment using the add_appointment method
+            self.add_appointment(patient_id, doctor_id, appointment_date, appointment_time)
+        except ValueError as ve:
+            print(f"Error: Invalid input format. {ve}")
+        except pyodbc.Error as e:
+            print(f"Error adding appointment: {e}")
+
+    def display_doctors(self):
+        doctors = self.get_doctors()
+        if doctors:
+            print("Doctors:")
+            for doctor in doctors:
+                print(doctor)
+        else:
+            print("No doctors found.")
+
+    def display_patients(self):
+        patients = self.get_patients()
+        if patients:
+            print("Patients:")
+            for patient in patients:
+                print(patient)
+        else:
+            print("No patients found.")
+    
+    #display_appointment
+    def display_appointment(self):
+        appointments = self.get_appointment()
+        if appointments:
+            print("Appointment:")
+            for appointment in appointments:
+                print(appointment)
+        else:
+            print("No appointments found.")
+
+    def get_doctors(self):
+        doctors = []
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Doctors")
+            doctors = cursor.fetchall()
+            cursor.close()
+        except pyodbc.Error as e:
+            print(f"Error fetching doctors: {e}")
+        return doctors
+
+    def get_patients(self):
+        patients = []
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Patients")
+            patients = cursor.fetchall()
+            cursor.close()
+        except pyodbc.Error as e:
+            print(f"Error fetching patients: {e}")
+
+        return patients
+    
+    #get_appointment
+    def get_appointment(self):
+        appointments = []
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Appointment")
+            appointments = cursor.fetchall()
+            cursor.close()
+        except pyodbc.Error as e:
+            print(f"Error fetching appointments: {e}")
+
+        return appointments
+
+
+# Example usage:
+system = MedicalAppointmentSystem(server='DESKTOP-VIKK52P', database='ProjectPySql')
+system.connect()
+
+while True:
+    print("\n=== Medical Appointment System Menu ===")
+    print("1. Add Patient")
+    print("2. Add Doctor")
+    print("3. Update Patient Problem")
+    print("4. Delete Doctor")
+    print("5. Add Appointment")
+    print("6. Display Doctors")
+    print("7. Display Patients")
+    print("8. Display Appointment")
+    print("9. Delete Appointment")
+    print("10. Exit")
+
+    choice = input("Enter your choice (1-10): ")
+
+    if choice == '1':
+        system.manual_add_patient()
+    elif choice == '2':
+        system.manual_add_doctor()
+    elif choice == '3':
+        system.manual_update_patient_problem()
+    elif choice == '4':
+        system.manual_delete_doctor()
+    elif choice == '5':
+        system.manual_add_appointment()
+    elif choice == '6':
+        system.display_doctors()
+    elif choice == '7':
+        system.display_patients()
+    elif choice == '8':
+        system.display_appointment()
+    elif choice == '9':
+        system.manual_delete_appointment()
+    elif choice == '10':
+        print("Exiting the program. Goodbye!")
+        break
+    else:
+        print("Invalid choice. Please try again.")
+
+system.disconnect()
