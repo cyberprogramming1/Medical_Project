@@ -6,6 +6,7 @@ class MedicalAppointmentSystem:
         self.server = server
         self.database = database
         self.connection = None
+        self.logged_in_user = None
 
     def connect(self):
         try:
@@ -20,6 +21,42 @@ class MedicalAppointmentSystem:
             print('Disconnected from Database.')
         else:
             print('No active connection to disconnect.')
+    def register_user(self, username, password):
+        try:
+            # Hash the password before storing it in the database
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+
+            cursor = self.connection.cursor()
+            cursor.execute("INSERT INTO Users (Username, Password) VALUES (?, ?)",
+                           (username, hashed_password))
+            self.connection.commit()
+            cursor.close()
+            print("User registered successfully.")
+        except pyodbc.Error as e:
+            print(f"Error registering user: {e}")
+
+    def login_user(self, username, password):
+        try:
+            # Hash the provided password to compare it with the stored hash
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT Password FROM Users WHERE Username = ?", (username,))
+            stored_password = cursor.fetchone()
+
+            if stored_password and hashed_password == stored_password[0]:
+                print("Login successful.")
+                self.logged_in_user = username  # Set the logged-in user
+                return True
+            else:
+                print("Invalid username or password.")
+                return False
+        except pyodbc.Error as e:
+            print(f"Error logging in: {e}")
+
+    def is_authenticated(self):
+        return self.logged_in_user is not None
+
 
     def add_patient(self, name, surname, age, gender, problem):
         if self.connection is None:
@@ -214,46 +251,72 @@ class MedicalAppointmentSystem:
 
 
 # Example usage:
-system = MedicalAppointmentSystem(server='DESKTOP-VIKK52P', database='ProjectPySql')
-system.connect()
+def main():
+    system = MedicalAppointmentSystem(server='DESKTOP-VIKK52P', database='ProjectPySql')
+    system.connect()
 
-while True:
-    print("\n=== Medical Appointment System Menu ===")
-    print("1. Add Patient")
-    print("2. Add Doctor")
-    print("3. Update Patient Problem")
-    print("4. Delete Doctor")
-    print("5. Add Appointment")
-    print("6. Display Doctors")
-    print("7. Display Patients")
-    print("8. Display Appointment")
-    print("9. Delete Appointment")
-    print("10. Exit")
+    while True:
+        print("\n=== Medical Appointment System Menu ===")
+        print("1. Register")
+        print("2. Login")
 
-    choice = input("Enter your choice (1-10): ")
+        choice = input("Enter your choice (1-2): ")
 
-    if choice == '1':
-        system.manual_add_patient()
-    elif choice == '2':
-        system.manual_add_doctor()
-    elif choice == '3':
-        system.manual_update_patient_problem()
-    elif choice == '4':
-        system.manual_delete_doctor()
-    elif choice == '5':
-        system.manual_add_appointment()
-    elif choice == '6':
-        system.display_doctors()
-    elif choice == '7':
-        system.display_patients()
-    elif choice == '8':
-        system.display_appointment()
-    elif choice == '9':
-        system.manual_delete_appointment()
-    elif choice == '10':
-        print("Exiting the program. Goodbye!")
-        break
-    else:
-        print("Invalid choice. Please try again.")
+        if choice == '1':
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            system.register_user(username, password)
+        elif choice == '2':
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            if system.login_user(username, password):
+                print("Login successful.")
+                break
+            else:
+                print("Login failed. Try again.")
+        else:
+            print("Invalid choice. Please try again.")
 
-system.disconnect()
+    while system.is_authenticated():
+        print("\n=== Medical Appointment System Menu ===")
+        print("3. Add Patient")
+        print("4. Add Doctor")
+        print("5. Update Patient Problem")
+        print("6. Delete Doctor")
+        print("7. Add Appointment")
+        print("8. Display Doctors")
+        print("9. Display Patients")
+        print("10. Display Appointments")
+        print("11. Delete Appointment")
+        print("12. Exit")
+
+        choice = input("Enter your choice (3-12): ")
+
+        if choice == '3':
+            system.manual_add_patient()
+        elif choice == '4':
+            system.manual_add_doctor()
+        elif choice == '5':
+            system.manual_update_patient_problem()
+        elif choice == '6':
+            system.manual_delete_doctor()
+        elif choice == '7':
+            system.manual_add_appointment()
+        elif choice == '8':
+            system.display_doctors()
+        elif choice == '9':
+            system.display_patients()
+        elif choice == '10':
+            system.display_appointments()
+        elif choice == '11':
+            system.manual_delete_appointment()
+        elif choice == '12':
+            print("Exiting the program. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+    system.disconnect()
+
+if __name__ == "__main__":
+    main()
