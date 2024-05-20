@@ -45,10 +45,12 @@ ON DELETE CASCADE;
 select * from Patients;
 select * from Doctors;
 select * from Appointment;
+select * from Users;
 
 delete Appointment;
 delete Patients;
 delete Doctors;
+delete Users;
 
 
 
@@ -57,3 +59,4 @@ delete Doctors;
 DBCC CHECKIDENT ('Patients', RESEED, 0);
 DBCC CHECKIDENT ('Doctors', RESEED, 0);
 DBCC CHECKIDENT ('Appointment', RESEED, 0);
+DBCC CHECKIDENT ('Users', RESEED, 0);

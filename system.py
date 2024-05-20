@@ -4,6 +4,7 @@ from datetime import datetime
 from database import Database
 from models import Patient, Doctor, Appointment
 from utils import parse_date, parse_time
+from tabulate import tabulate
 
 class MedicalAppointmentSystem(Database):
     def __init__(self, server, database):
@@ -46,7 +47,11 @@ class MedicalAppointmentSystem(Database):
     def is_authenticated(self):
         return self.logged_in_user is not None
 
-    
+    def logout(self):
+        self.logged_in_user = None
+        self.disconnect()  # Disconnect from the database
+        print("Logged out successfully.")
+        
     def add_patient(self, name, surname, age, gender, problem):
         if self.connection is None:
             print("No database connection. Please connect to the database first.")
@@ -171,27 +176,27 @@ class MedicalAppointmentSystem(Database):
     def display_doctors(self):
         doctors = self.get_doctors()
         if doctors:
-            print("Doctors:")
-            for doctor in doctors:
-                print(f"ID: {doctor.DoctorID}, Name: {doctor.Doctor_Name}, Surname: {doctor.Doctor_Surname}, Work: {doctor.Doctor_work}")
+            headers = ["ID", "Name", "Surname", "Work"]
+            table = [[doctor.DoctorID, doctor.Doctor_Name, doctor.Doctor_Surname, doctor.Doctor_work] for doctor in doctors]
+            print(tabulate(table, headers, tablefmt="grid"))
         else:
             print("No doctors found.")
 
     def display_patients(self):
         patients = self.get_patients()
         if patients:
-            print("Patients:")
-            for patient in patients:
-                print(f"ID: {patient.PatientID}, Name: {patient.Patient_Name}, Surname: {patient.Patient_Surname}, Age: {patient.Patient_Age}, Gender: {patient.Patient_Gender}, Problem: {patient.Patient_Problem}")
+            headers = ["ID", "Name", "Surname", "Age", "Gender", "Problem"]
+            table = [[patient.PatientID, patient.Patient_Name, patient.Patient_Surname, patient.Patient_Age, patient.Patient_Gender, patient.Patient_Problem] for patient in patients]
+            print(tabulate(table, headers, tablefmt="grid"))
         else:
             print("No patients found.")
     
     def display_appointments(self):
         appointments = self.get_appointments()
         if appointments:
-            print("Appointments:")
-            for appointment in appointments:
-                print(f"ID: {appointment.AppointmentID}, Patient ID: {appointment.PatientID}, Doctor ID: {appointment.DoctorID}, Date: {appointment.AppointmentDate}, Time: {appointment.AppointmentTime}")
+            headers = ["ID", "Patient ID", "Doctor ID", "Date", "Time"]
+            table = [[appointment.AppointmentID, appointment.PatientID, appointment.DoctorID, appointment.AppointmentDate, appointment.AppointmentTime] for appointment in appointments]
+            print(tabulate(table, headers, tablefmt="grid"))
         else:
             print("No appointments found.")
 
@@ -227,3 +232,33 @@ class MedicalAppointmentSystem(Database):
         except pyodbc.Error as e:
             print(f"Error fetching appointments: {e}")
         return appointments
+
+    def filter_patients_by_name(self, name):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Patients WHERE Patient_Name LIKE ?", ('%' + name + '%',))
+            patients = cursor.fetchall()
+            cursor.close()
+            if patients:
+                headers = ["ID", "Name", "Surname", "Age", "Gender", "Problem"]
+                table = [[patient.PatientID, patient.Patient_Name, patient.Patient_Surname, patient.Patient_Age, patient.Patient_Gender, patient.Patient_Problem] for patient in patients]
+                print(tabulate(table, headers, tablefmt="grid"))
+            else:
+                print("No patients found with that name.")
+        except pyodbc.Error as e:
+            print(f"Error filtering patients: {e}")
+
+    def filter_doctors_by_name(self, name):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Doctors WHERE Doctor_Name LIKE ?", ('%' + name + '%',))
+            doctors = cursor.fetchall()
+            cursor.close()
+            if doctors:
+                headers = ["ID", "Name", "Surname", "Work"]
+                table = [[doctor.DoctorID, doctor.Doctor_Name, doctor.Doctor_Surname, doctor.Doctor_work] for doctor in doctors]
+                print(tabulate(table, headers, tablefmt="grid"))
+            else:
+                print("No doctors found with that name.")
+        except pyodbc.Error as e:
+            print(f"Error filtering doctors: {e}")
