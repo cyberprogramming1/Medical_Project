@@ -16,6 +16,6 @@ class Database:
     def disconnect(self):
         if self.connection:
             self.connection.close()
-            print('Disconnected from Database.')
+            print("Disconnected from the database.")
         else:
-            print('No active connection to disconnect.')
+            print("No active database connection to disconnect from.")
