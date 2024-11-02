@@ -252,7 +252,7 @@ class MedicalAppointmentSystem:
 
 # Example usage:
 def main():
-    system = MedicalAppointmentSystem(server='DESKTOP-VIKK52P', database='ProjectPySql')
+    system = MedicalAppointmentSystem(server='name_of_server', database='name_of_database')
     system.connect()
 
     while True:
