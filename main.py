@@ -8,8 +8,8 @@ from Report.report import ReportGeneration
 from datetime import datetime
 
 def main():
-    server = 'DESKTOP-VIKK52P'
-    database = 'ProjectPySql'
+    server = 'Name_of_Server'
+    database = 'Name_of_Database'
     db = Database(server, database)
     db.connect()
 
